@@ -1,0 +1,33 @@
+# Render blueprint - https://render.com/docs/blueprint-spec
+#
+# Render has no native Java/Spring runtime, so the API is deployed as a
+# Docker service built from the Dockerfile at the repository root.
+#
+# Usage: Render Dashboard -> New -> Blueprint -> select this repository.
+services:
+  - type: web
+    name: cookbook-api
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      # Secrets are intentionally not committed: sync=false makes Render
+      # prompt for the value once, then stores it encrypted.
+      - key: DB_URL
+        sync: false
+      - key: DB_DIRECT_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      # Comma separated list of allowed frontend origins (the Vercel URL).
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: DOCKER_COMPOSE_ENABLED
+        value: "false"
+

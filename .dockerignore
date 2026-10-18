@@ -1,0 +1,30 @@
+# Build output - always rebuilt inside the image
+target/
+**/target/
+
+# The frontend is deployed separately (Vercel); never needed in the API image
+frontend/
+
+# VCS / IDE / OS noise
+.git/
+.gitignore
+.gitattributes
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Local-only secrets - must never end up in an image layer
+src/main/resources/application-neon.properties
+src/main/resources/application-local.properties
+.env
+.env.*
+
+# Local dev infrastructure
+compose.yaml
+
+# Docs
+HELP.md
+README.md
+**/AGENTS.md
+
