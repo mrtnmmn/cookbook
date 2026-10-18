@@ -1,0 +1,31 @@
+# ===============================================================
+# Template for src/main/resources/application-neon.properties
+# Copy this file, drop the .example suffix and fill in your Neon
+# credentials. The real file is git-ignored.
+#
+#   cp src/main/resources/application-neon.properties.example \
+#      src/main/resources/application-neon.properties
+#
+# Activate with: SPRING_PROFILES_ACTIVE=neon
+# ===============================================================
+
+spring.docker.compose.enabled=false
+
+# Neon gives you: postgresql://USER:PASSWORD@HOST/DB?sslmode=require&channel_binding=require
+# Convert to JDBC: jdbc:postgresql://HOST/DB?sslmode=require   (no user/password/channel_binding)
+spring.datasource.url=${DB_URL:jdbc:postgresql://<pooled-host>/<database>?sslmode=require}
+spring.datasource.username=${DB_USERNAME:<user>}
+spring.datasource.password=${DB_PASSWORD:<password>}
+
+spring.datasource.hikari.maximum-pool-size=5
+spring.datasource.hikari.minimum-idle=0
+spring.datasource.hikari.idle-timeout=30000
+spring.datasource.hikari.max-lifetime=280000
+spring.datasource.hikari.connection-timeout=30000
+spring.datasource.hikari.initialization-fail-timeout=-1
+
+# Migrations must use the DIRECT endpoint (host without the "-pooler" suffix).
+spring.flyway.url=${DB_DIRECT_URL:jdbc:postgresql://<direct-host>/<database>?sslmode=require}
+spring.flyway.user=${DB_USERNAME:<user>}
+spring.flyway.password=${DB_PASSWORD:<password>}
+
