@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { getRecipes, totalMinutes, type Recipe } from "@/lib/api";
+import { RecipeListSkeleton } from "@/components/skeletons";
 
 function RecipeCard({ recipe }: { recipe: Recipe }) {
   const minutes = totalMinutes(recipe);
@@ -93,13 +94,7 @@ export default function Home() {
         </Link>
       </header>
 
-      <Suspense
-        fallback={
-          <p className="mt-10 text-sm text-black/50 dark:text-white/50">
-            Loading recipes...
-          </p>
-        }
-      >
+      <Suspense fallback={<RecipeListSkeleton />}>
         <RecipeList />
       </Suspense>
     </main>

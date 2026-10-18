@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { getRecipe, totalMinutes } from "@/lib/api";
+import { RecipeDetailSkeleton } from "@/components/skeletons";
 
 /** Resolves to "CookBook - <recipe name>" via the root layout template. */
 export async function generateMetadata({
@@ -116,13 +117,7 @@ export default function RecipeDetailPage({
         &larr; All recipes
       </Link>
 
-      <Suspense
-        fallback={
-          <p className="mt-10 text-sm text-black/50 dark:text-white/50">
-            Loading recipe...
-          </p>
-        }
-      >
+      <Suspense fallback={<RecipeDetailSkeleton />}>
         <RecipeDetail params={params} />
       </Suspense>
     </main>
