@@ -21,7 +21,7 @@ function LoadingLabel({ children }: Readonly<{ children: string }>) {
 
 export function RecipeCardSkeleton() {
   return (
-    <div className="rounded-xl border border-black/10 p-5 dark:border-white/15">
+    <div className="flex h-44 flex-col overflow-hidden rounded-xl border border-black/10 p-5 dark:border-white/15">
       {/* title */}
       <Skeleton className="h-6 w-2/3" />
 
@@ -32,14 +32,14 @@ export function RecipeCardSkeleton() {
       </div>
 
       {/* meta row */}
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+      <div className="mt-auto flex flex-wrap gap-x-4 gap-y-1">
         <Skeleton className="h-3 w-20" />
         <Skeleton className="h-3 w-14" />
         <Skeleton className="h-3 w-24" />
       </div>
 
       {/* tags */}
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-3 flex h-6 gap-2 overflow-hidden">
         <Skeleton className="h-5 w-16 rounded-full" />
         <Skeleton className="h-5 w-12 rounded-full" />
       </div>
@@ -54,7 +54,7 @@ export function RecipeListSkeleton({
     <div aria-busy="true">
       <LoadingLabel>Loading recipes</LoadingLabel>
       <Skeleton className="mt-1 h-4 w-24" />
-      <div className="mt-10 grid gap-4 sm:grid-cols-2">
+      <div className="mt-10 grid auto-rows-max gap-4 sm:grid-cols-2">
         {Array.from({ length: count }, (_, i) => (
           <RecipeCardSkeleton key={i} />
         ))}
@@ -187,4 +187,6 @@ export function RecipeFormSkeleton() {
     </div>
   );
 }
+
+
 

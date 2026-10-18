@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { RecipeFormSkeleton } from "@/components/skeletons";
+import { PageShell } from "@/components/page-shell";
 
 export default function NewRecipeLoading() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12">
+    <PageShell>
       <Link
         href="/"
         className="text-sm text-black/60 hover:underline dark:text-white/60"
@@ -12,7 +13,6 @@ export default function NewRecipeLoading() {
       </Link>
 
       <RecipeFormSkeleton />
-    </main>
+    </PageShell>
   );
 }
-

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createRecipe, type CreateRecipeRequest } from "@/lib/api";
+import { PageShell } from "@/components/page-shell";
 
 type IngredientRow = { name: string; quantity: string; unit: string };
 
@@ -73,10 +74,10 @@ export default function NewRecipePage() {
   }
 
   const inputClass =
-    "w-full rounded-lg border border-black/15 bg-transparent px-3 py-2 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50";
+    "w-full resize-none rounded-lg border border-black/15 bg-transparent px-3 py-2 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50";
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12">
+    <PageShell>
       <Link
         href="/"
         className="text-sm text-black/60 hover:underline dark:text-white/60"
@@ -187,16 +188,16 @@ export default function NewRecipePage() {
                   value={row.unit}
                   onChange={(e) => updateRow(index, { unit: e.target.value })}
                 />
-                {rows.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeRow(index)}
-                    className="px-2 text-black/40 hover:text-black dark:text-white/40 dark:hover:text-white"
-                    aria-label="Remove ingredient"
-                  >
-                    &times;
-                  </button>
-                )}
+                {/* Always rendered so the input widths never change. */}
+                <button
+                  type="button"
+                  onClick={() => removeRow(index)}
+                  disabled={rows.length === 1}
+                  className="w-7 shrink-0 text-black/40 hover:text-black disabled:invisible dark:text-white/40 dark:hover:text-white"
+                  aria-label="Remove ingredient"
+                >
+                  &times;
+                </button>
               </div>
             ))}
           </div>
@@ -227,7 +228,7 @@ export default function NewRecipePage() {
           {saving ? "Saving..." : "Save recipe"}
         </button>
       </form>
-    </main>
+    </PageShell>
   );
 }
 

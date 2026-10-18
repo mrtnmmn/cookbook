@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { getRecipe, totalMinutes } from "@/lib/api";
 import { RecipeDetailSkeleton } from "@/components/skeletons";
+import { PageShell } from "@/components/page-shell";
 
 /** Resolves to "CookBook - <recipe name>" via the root layout template. */
 export async function generateMetadata({
@@ -109,7 +110,7 @@ export default function RecipeDetailPage({
   params: Promise<{ id: string }>;
 }) {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12">
+    <PageShell>
       <Link
         href="/"
         className="text-sm text-black/60 hover:underline dark:text-white/60"
@@ -120,6 +121,6 @@ export default function RecipeDetailPage({
       <Suspense fallback={<RecipeDetailSkeleton />}>
         <RecipeDetail params={params} />
       </Suspense>
-    </main>
+    </PageShell>
   );
 }
