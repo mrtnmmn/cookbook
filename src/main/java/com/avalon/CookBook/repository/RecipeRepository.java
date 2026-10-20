@@ -18,5 +18,9 @@ public interface RecipeRepository extends JpaRepository<Recipe, Long> {
     @Override
     @EntityGraph(attributePaths = { "ingredients", "ingredients.ingredient" })
     List<Recipe> findAll();
+
+    /** Case-insensitive "contains" match on the title (LIKE %fragment%). */
+    @EntityGraph(attributePaths = { "ingredients", "ingredients.ingredient" })
+    List<Recipe> findByTitleContainingIgnoreCaseOrderByTitleAsc(String fragment);
 }
 

@@ -91,6 +91,33 @@ public class RecipeService {
         return recipeRepository.findAll();
     }
 
+    /**
+     * Loose title search: every whitespace-separated token must appear somewhere
+     * in the title (case-insensitive), so "onion ramen" also finds
+     * "Creamy onion ramen". A blank query returns every recipe.
+     */
+    @Transactional(readOnly = true)
+    public List<Recipe> searchByTitle(String query) {
+        if (query == null || query.isBlank()) {
+            return findAll();
+        }
+
+        String[] tokens = query.trim().toLowerCase().split("\\s+");
+
+        // The widest token drives the (indexable) database filter; the rest are
+        // applied in memory on the already small result set.
+        String broadest = java.util.Arrays.stream(tokens)
+                .max(java.util.Comparator.comparingInt(String::length))
+                .orElse("");
+
+        return recipeRepository.findByTitleContainingIgnoreCaseOrderByTitleAsc(broadest).stream()
+                .filter(recipe -> {
+                    String title = recipe.getTitle().toLowerCase();
+                    return java.util.Arrays.stream(tokens).allMatch(title::contains);
+                })
+                .toList();
+    }
+
     /** Deletes a recipe and its ingredient join rows. */
     @Transactional
     public void delete(Long id) {

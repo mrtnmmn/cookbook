@@ -55,6 +55,21 @@ export async function getRecipes(): Promise<Recipe[]> {
   return res.json();
 }
 
+/** Loose, case-insensitive title search handled by the database. */
+export async function searchRecipes(
+  query: string,
+  signal?: AbortSignal,
+): Promise<Recipe[]> {
+  const res = await fetch(
+    `${API_BASE_URL}/api/recipes?q=${encodeURIComponent(query)}`,
+    { cache: "no-store", signal },
+  );
+  if (!res.ok) {
+    throw new Error(`Search failed (HTTP ${res.status})`);
+  }
+  return res.json();
+}
+
 export async function getRecipe(id: string | number): Promise<Recipe | null> {
   const res = await fetch(`${API_BASE_URL}/api/recipes/${id}`, {
     cache: "no-store",

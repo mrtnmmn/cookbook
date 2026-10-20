@@ -53,8 +53,13 @@ export function RecipeListSkeleton({
   return (
     <div aria-busy="true">
       <LoadingLabel>Loading recipes</LoadingLabel>
-      <Skeleton className="mt-1 h-4 w-24" />
-      <div className="mt-10 grid auto-rows-max gap-4 sm:grid-cols-2">
+      {/* search bar */}
+      <Skeleton className="mt-6 h-[42px] w-full rounded-full" />
+      {/* result count */}
+      <div className="mt-3 h-5">
+        <Skeleton className="h-4 w-24" />
+      </div>
+      <div className="mt-7 grid auto-rows-max gap-4 sm:grid-cols-2">
         {Array.from({ length: count }, (_, i) => (
           <RecipeCardSkeleton key={i} />
         ))}
