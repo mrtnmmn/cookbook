@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { getRecipe, totalMinutes } from "@/lib/api";
 import { RecipeDetailSkeleton } from "@/components/skeletons";
 import { PageShell } from "@/components/page-shell";
+import { RecipeActions } from "@/components/recipe-actions";
 
 /** Resolves to "CookBook - <recipe name>" via the root layout template. */
 export async function generateMetadata({
@@ -31,7 +32,10 @@ async function RecipeDetail({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <>
-      <h1 className="mt-6 text-3xl font-bold tracking-tight">{recipe.title}</h1>
+      <div className="mt-6 flex items-start justify-between gap-4">
+        <h1 className="text-3xl font-bold tracking-tight">{recipe.title}</h1>
+        <RecipeActions recipeId={recipe.id} />
+      </div>
 
       {recipe.description && (
         <p className="mt-2 text-black/70 dark:text-white/70">

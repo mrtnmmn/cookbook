@@ -90,6 +90,20 @@ export async function createRecipe(
   return res.json();
 }
 
+/** Deletes a recipe. Resolves on 204 (and on 404, which is already the goal). */
+export async function deleteRecipe(id: string | number): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/recipes/${id}`, {
+    method: "DELETE",
+  });
+
+  if (!res.ok && res.status !== 404) {
+    const problem: ProblemDetail = await res.json().catch(() => ({}));
+    throw new Error(
+      problem.detail || `Failed to delete recipe (HTTP ${res.status})`,
+    );
+  }
+}
+
 export function totalMinutes(recipe: Recipe): number | null {
   const prep = recipe.prepMinutes ?? 0;
   const cook = recipe.cookMinutes ?? 0;
