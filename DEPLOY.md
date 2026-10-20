@@ -113,3 +113,29 @@ curl http://localhost:8099/api/health/db
 For day-to-day local development nothing changes: `./mvnw spring-boot:run`
 still starts `compose.yaml` and uses the local Postgres container.
 
+---
+
+## Keep-alive / uptime check (GitHub Actions)
+
+`.github/workflows/health-check.yml` pings `GET /api/health` every 10 minutes.
+On the Render free plan the instance sleeps after ~15 minutes without traffic,
+so this keeps it warm and fails (with an email notification) when the API is
+unreachable.
+
+Setup:
+
+1. Push the workflow to the default branch - scheduled workflows only run from
+   the default branch.
+2. In GitHub: **Settings -> Secrets and variables -> Actions -> Variables ->
+   New repository variable**
+   - Name: `API_BASE_URL`
+   - Value: `https://<your-service>.onrender.com` (no trailing slash)
+3. **Actions** tab -> *Health check* -> **Run workflow** to verify it manually.
+
+Notes:
+
+- Cron runs in UTC and GitHub may delay scheduled runs by several minutes when
+  hosted runners are busy; `*/10` is a best effort, not a guarantee.
+- GitHub disables scheduled workflows in public repos after 60 days without
+  commits; re-enable them from the Actions tab.
+- The job retries 5 times with 30s pauses, which covers a Render cold start.
