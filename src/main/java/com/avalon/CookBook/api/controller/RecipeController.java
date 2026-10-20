@@ -3,6 +3,7 @@ package com.avalon.CookBook.api.controller;
 import java.net.URI;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -49,6 +50,13 @@ public class RecipeController {
     @GetMapping("/{id}")
     public ResponseEntity<RecipeResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(RecipeResponse.from(recipeService.getById(id)));
+    }
+
+    /** Deletes a recipe. Returns 204, or 404 when the id does not exist. */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        recipeService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }
 

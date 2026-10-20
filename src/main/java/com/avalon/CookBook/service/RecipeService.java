@@ -60,6 +60,14 @@ public class RecipeService {
         return recipeRepository.findAll();
     }
 
+    /** Deletes a recipe and its ingredient join rows. */
+    @Transactional
+    public void delete(Long id) {
+        Recipe recipe = recipeRepository.findById(id)
+                .orElseThrow(() -> new RecipeNotFoundException(id));
+        recipeRepository.delete(recipe);
+    }
+
     private Ingredient resolveIngredient(String name) {
         return ingredientRepository.findByNameIgnoreCase(name)
                 .orElseGet(() -> ingredientRepository.save(new Ingredient(name)));
