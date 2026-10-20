@@ -70,6 +70,44 @@ export async function searchRecipes(
   return res.json();
 }
 
+/** Mirrors RecipePageResponse on the backend. */
+export type RecipePage = {
+  items: Recipe[];
+  page: number;
+  size: number;
+  totalElements: number;
+  hasMore: boolean;
+};
+
+/** How many recipes are fetched per batch on the landing page. */
+export const PAGE_SIZE = 20;
+
+/**
+ * One batch of recipes, newest first, optionally narrowed by the same loose
+ * title/tag search used by {@link searchRecipes}.
+ */
+export async function getRecipePage(
+  page: number,
+  options: { query?: string; size?: number; signal?: AbortSignal } = {},
+): Promise<RecipePage> {
+  const { query = "", size = PAGE_SIZE, signal } = options;
+
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  });
+  if (query.trim()) params.set("q", query.trim());
+
+  const res = await fetch(`${API_BASE_URL}/api/recipes?${params}`, {
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to load recipes (HTTP ${res.status})`);
+  }
+  return res.json();
+}
+
 export async function getRecipe(id: string | number): Promise<Recipe | null> {
   const res = await fetch(`${API_BASE_URL}/api/recipes/${id}`, {
     cache: "no-store",

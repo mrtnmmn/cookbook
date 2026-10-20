@@ -1,21 +1,22 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { getRecipes, type Recipe } from "@/lib/api";
+import { getRecipePage, PAGE_SIZE, type RecipePage } from "@/lib/api";
 import { RecipeListSkeleton } from "@/components/skeletons";
 import { PageShell } from "@/components/page-shell";
 import { RecipeBrowser } from "@/components/recipe-browser";
 
 async function RecipeList() {
-  let recipes: Recipe[] = [];
+  let page: RecipePage | null = null;
   let error: string | null = null;
 
   try {
-    recipes = await getRecipes();
+    // First batch only; the browser loads the following ones while scrolling.
+    page = await getRecipePage(0, { size: PAGE_SIZE });
   } catch {
     error = "Could not reach the CookBook API. Is the backend running on :8085?";
   }
 
-  if (error) {
+  if (error || !page) {
     return (
       <>
         <p className="mt-1 h-5 text-sm text-black/60 dark:text-white/60" />
@@ -26,7 +27,7 @@ async function RecipeList() {
     );
   }
 
-  return <RecipeBrowser initialRecipes={recipes} />;
+  return <RecipeBrowser initialPage={page} />;
 }
 
 export default function Home() {

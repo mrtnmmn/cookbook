@@ -1,8 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { searchRecipes, totalMinutes, type Recipe } from "@/lib/api";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  getRecipePage,
+  totalMinutes,
+  type Recipe,
+  type RecipePage,
+} from "@/lib/api";
+import { RecipeCardSkeleton } from "@/components/skeletons";
 
 /** Lowercases and strips diacritics so "Jalapeño" matches "jalapeno". */
 function normalize(value: string): string {
@@ -52,80 +58,190 @@ function RecipeCard({ recipe }: Readonly<{ recipe: Recipe }>) {
   );
 }
 
+/** Everything that is currently rendered, for one "feed" (browse or search). */
+type Feed = {
+  /** The query this feed belongs to; "" is the unfiltered landing feed. */
+  key: string;
+  items: Recipe[];
+  /** Index of the batch to load next. */
+  nextPage: number;
+  hasMore: boolean;
+  total: number;
+};
+
+function feedFrom(key: string, page: RecipePage): Feed {
+  return {
+    key,
+    items: page.items,
+    nextPage: page.page + 1,
+    hasMore: page.hasMore,
+    total: page.totalElements,
+  };
+}
+
 /**
- * Recipe grid with a search bar matching recipe titles and tags.
+ * Recipe grid with batch loading and a title/tag search bar.
  *
- * Typing filters the recipes that are already loaded instantly, and a debounced
- * request then asks the API for further matches, which are appended to the
- * local ones (deduplicated by id).
+ * The first batch is rendered on the server; the next one is fetched right
+ * away and kept in a buffer, so when the user scrolls to the bottom sentinel
+ * it can be rendered immediately while the batch after it starts loading.
+ *
+ * Searching filters the already loaded recipes instantly and, after a short
+ * debounce, restarts the feed from the server for that query.
  */
 export function RecipeBrowser({
-  initialRecipes,
-}: Readonly<{ initialRecipes: Recipe[] }>) {
+  initialPage,
+}: Readonly<{ initialPage: RecipePage }>) {
   const [query, setQuery] = useState("");
-  const [remote, setRemote] = useState<Recipe[]>([]);
-  const [searching, setSearching] = useState(false);
+  const [activeQuery, setActiveQuery] = useState("");
+  const [feed, setFeed] = useState<Feed>(() => feedFrom("", initialPage));
+  const [loadingMore, setLoadingMore] = useState(false);
+  /** Every recipe seen so far, used for the instant local filter. */
+  const [seen, setSeen] = useState<Recipe[]>(initialPage.items);
+
+  /** The batch that is already on its way for (key, page). */
+  const buffer = useRef<{
+    key: string;
+    page: number;
+    promise: Promise<RecipePage>;
+  } | null>(null);
+  /** Guards against out-of-order responses when the query changes. */
+  const feedId = useRef(0);
+
+  const remember = useCallback((recipes: Recipe[]) => {
+    setSeen((current) => dedupe([...current, ...recipes]));
+  }, []);
+
+  const prefetch = useCallback((key: string, page: number) => {
+    const promise = getRecipePage(page, { query: key });
+    // Avoid an unhandled rejection: failures surface when the batch is awaited.
+    promise.catch(() => {});
+    buffer.current = { key, page, promise };
+  }, []);
+
+  /** Returns the buffered batch when it fits, otherwise fetches it. */
+  const takeBatch = useCallback((key: string, page: number) => {
+    const buffered = buffer.current;
+    if (buffered?.key === key && buffered.page === page) {
+      buffer.current = null;
+      return buffered.promise;
+    }
+    return getRecipePage(page, { query: key });
+  }, []);
+
+  // The first batch is already rendered, so only batch 2 has to be started.
+  useEffect(() => {
+    if (initialPage.hasMore) prefetch("", initialPage.page + 1);
+  }, [initialPage, prefetch]);
+
+  // Debounce the input into the query the feed is built from.
+  useEffect(() => {
+    const timer = setTimeout(() => setActiveQuery(query.trim()), 250);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // Restart the feed whenever the active query changes. Until the first batch
+  // of the new feed arrives, feed.key !== activeQuery marks it as loading.
+  const feedKey = feed.key;
+
+  useEffect(() => {
+    if (activeQuery === feedKey) return;
+
+    const id = ++feedId.current;
+    const controller = new AbortController();
+
+    getRecipePage(0, { query: activeQuery, signal: controller.signal })
+      .then((page) => {
+        if (id !== feedId.current) return;
+        remember(page.items);
+        setFeed(feedFrom(activeQuery, page));
+        if (page.hasMore) prefetch(activeQuery, 1);
+      })
+      .catch(() => {
+        // Keep showing the local matches when the request fails.
+      });
+
+    return () => controller.abort();
+    // feedKey is only read to detect the switch, not to re-run on every append.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeQuery, prefetch, remember]);
+
+  const switching = activeQuery !== feed.key;
+  const busy = switching || loadingMore;
+
+  const loadMore = useCallback(() => {
+    if (loadingMore || switching || !feed.hasMore) return;
+
+    const id = feedId.current;
+    const { key, nextPage } = feed;
+    setLoadingMore(true);
+
+    takeBatch(key, nextPage)
+      .then((page) => {
+        if (id !== feedId.current) return;
+        remember(page.items);
+        setFeed((current) =>
+          current.key !== key
+            ? current
+            : {
+                ...current,
+                items: dedupe([...current.items, ...page.items]),
+                nextPage: page.page + 1,
+                hasMore: page.hasMore,
+                total: page.totalElements,
+              },
+        );
+        // Keep one batch ahead of the user.
+        if (page.hasMore) prefetch(key, page.page + 1);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (id === feedId.current) setLoadingMore(false);
+      });
+  }, [feed, loadingMore, prefetch, remember, switching, takeBatch]);
+
+  // Render the buffered batch as soon as the sentinel scrolls into view.
+  const sentinel = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const node = sentinel.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMore();
+      },
+      // Start a little before the sentinel is actually visible.
+      { rootMargin: "400px" },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [loadMore]);
 
   const tokens = useMemo(
     () => normalize(query).split(/\s+/).filter(Boolean),
     [query],
   );
 
-  // Step 1: instant client-side filter over the already loaded recipes.
-  const localMatches = useMemo(
-    () =>
-      tokens.length === 0
-        ? initialRecipes
-        : initialRecipes.filter((recipe) => matches(recipe, tokens)),
-    [initialRecipes, tokens],
-  );
-
-  // Step 2: debounced server search for recipes that are not in that list.
-  const requestId = useRef(0);
-
-  useEffect(() => {
-    const term = query.trim();
-
-    if (!term) {
-      setRemote([]);
-      setSearching(false);
-      return;
-    }
-
-    const id = ++requestId.current;
-    const controller = new AbortController();
-    setSearching(true);
-
-    const timer = setTimeout(() => {
-      searchRecipes(term, controller.signal)
-        .then((results) => {
-          if (id === requestId.current) setRemote(results);
-        })
-        .catch(() => {
-          // Aborted or offline: the local matches are still shown.
-          if (id === requestId.current) setRemote([]);
-        })
-        .finally(() => {
-          if (id === requestId.current) setSearching(false);
-        });
-    }, 250);
-
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [query]);
-
+  // While typing, the recipes already in memory are filtered instantly; the
+  // server results for the same query are appended once they arrive.
   const recipes = useMemo(() => {
-    if (remote.length === 0) return localMatches;
+    if (tokens.length === 0) return feed.items;
 
-    const seen = new Set(localMatches.map((recipe) => recipe.id));
-    return [...localMatches, ...remote.filter((recipe) => !seen.has(recipe.id))];
-  }, [localMatches, remote]);
+    const local = seen.filter((recipe) => matches(recipe, tokens));
+    const remote = feed.key === activeQuery ? feed.items : [];
+    return dedupe([...local, ...remote]);
+  }, [activeQuery, feed, seen, tokens]);
+
+  const searching = tokens.length > 0;
+  const showSentinel = feed.hasMore && !switching;
 
   let status: string;
-  if (searching && recipes.length === 0) {
+  if (busy && recipes.length === 0) {
     status = "Searching...";
+  } else if (!searching && feed.total > recipes.length) {
+    status = `${recipes.length} of ${feed.total} recipes`;
   } else {
     status = `${recipes.length} recipe${recipes.length === 1 ? "" : "s"}`;
   }
@@ -153,9 +269,9 @@ export function RecipeBrowser({
         {status}
       </p>
 
-      {recipes.length === 0 && !searching ? (
+      {recipes.length === 0 && !busy ? (
         <p className="mt-10 text-sm text-black/60 dark:text-white/60">
-          {query.trim()
+          {searching
             ? `No recipes match "${query.trim()}".`
             : "No recipes yet. Create your first one."}
         </p>
@@ -164,8 +280,16 @@ export function RecipeBrowser({
           {recipes.map((recipe) => (
             <RecipeCard key={recipe.id} recipe={recipe} />
           ))}
+
+          {busy &&
+            recipes.length > 0 &&
+            Array.from({ length: 2 }, (_, i) => (
+              <RecipeCardSkeleton key={`loading-${i}`} />
+            ))}
         </div>
       )}
+
+      {showSentinel && <div ref={sentinel} aria-hidden="true" className="h-1" />}
     </>
   );
 }
@@ -189,3 +313,11 @@ function SearchIcon() {
   );
 }
 
+function dedupe(recipes: Recipe[]): Recipe[] {
+  const seen = new Set<number>();
+  return recipes.filter((recipe) => {
+    if (seen.has(recipe.id)) return false;
+    seen.add(recipe.id);
+    return true;
+  });
+}

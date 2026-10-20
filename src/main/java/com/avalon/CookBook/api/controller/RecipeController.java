@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.avalon.CookBook.api.dto.CreateRecipeRequest;
+import com.avalon.CookBook.api.dto.RecipePageResponse;
 import com.avalon.CookBook.api.dto.RecipeResponse;
 import com.avalon.CookBook.domain.Recipe;
 import com.avalon.CookBook.service.RecipeService;
@@ -52,6 +53,20 @@ public class RecipeController {
         return ResponseEntity.ok(recipeService.search(q).stream()
                 .map(RecipeResponse::from)
                 .toList());
+    }
+
+    /**
+     * One batch of recipes, newest first:
+     * {@code GET /api/recipes?page=0&size=20[&q=onion]}. Selected over
+     * {@link #list(String)} as soon as a {@code page} parameter is present, so
+     * the unpaged contract keeps working.
+     */
+    @GetMapping(params = "page")
+    public ResponseEntity<RecipePageResponse> listPage(
+            @RequestParam(name = "q", required = false) String q,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size) {
+        return ResponseEntity.ok(recipeService.page(q, page, size));
     }
 
     @GetMapping("/{id}")
