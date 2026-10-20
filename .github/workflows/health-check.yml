@@ -1,0 +1,87 @@
+# Pings the CookBook API health endpoint on a schedule.
+#
+# Why: the API runs on a Render free plan, which spins the instance down after
+# ~15 minutes without traffic. A periodic ping keeps it warm and also acts as a
+# lightweight uptime monitor (the run fails and GitHub emails you when the API
+# is unreachable).
+#
+# Configuration (Settings -> Secrets and variables -> Actions):
+#   Variable  API_BASE_URL   e.g. https://cookbook-api.onrender.com
+# If the variable is missing, the fallback below is used.
+name: Health check
+
+on:
+  schedule:
+    # Every 10 minutes. GitHub runs cron jobs in UTC and may delay them by a
+    # few minutes when the hosted runner queue is busy.
+    - cron: "*/10 * * * *"
+  # Lets you trigger the check manually from the Actions tab.
+  workflow_dispatch:
+
+# A slow cold start must not pile up overlapping runs.
+concurrency:
+  group: health-check
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    name: Ping /api/health
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Call the health endpoint
+        env:
+          # Change the fallback to your deployed URL, or set the repository
+          # variable API_BASE_URL to override it without touching this file.
+          BASE_URL: ${{ vars.API_BASE_URL || 'https://cookbook-api.onrender.com' }}
+        run: |
+          set -euo pipefail
+
+          url="${BASE_URL%/}/api/health"
+          echo "Pinging $url"
+
+          # Render cold starts can take ~60s, so retry before declaring failure.
+          for attempt in 1 2 3 4 5; do
+            body_file="$(mktemp)"
+            status="$(curl \
+              --silent \
+              --show-error \
+              --location \
+              --max-time 60 \
+              --output "$body_file" \
+              --write-out '%{http_code}' \
+              "$url" || echo "000")"
+
+            body="$(cat "$body_file")"
+            echo "Attempt $attempt -> HTTP $status"
+
+            if [ "$status" = "200" ]; then
+              echo "Response: $body"
+              {
+                echo "### API is up :white_check_mark:"
+                echo ""
+                echo "- URL: \`$url\`"
+                echo "- Status: \`$status\` (attempt $attempt)"
+                echo "- Body: \`$body\`"
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+
+            echo "Not healthy yet (body: $body). Waiting 30s..."
+            sleep 30
+          done
+
+          {
+            echo "### API is down :x:"
+            echo ""
+            echo "- URL: \`$url\`"
+            echo "- Last status: \`$status\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "::error::Health check failed for $url (last status: $status)"
+          exit 1
+
