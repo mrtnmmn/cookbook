@@ -55,7 +55,7 @@ export async function getRecipes(): Promise<Recipe[]> {
   return res.json();
 }
 
-/** Loose, case-insensitive title search handled by the database. */
+/** Loose, case-insensitive search over recipe titles and tags. */
 export async function searchRecipes(
   query: string,
   signal?: AbortSignal,

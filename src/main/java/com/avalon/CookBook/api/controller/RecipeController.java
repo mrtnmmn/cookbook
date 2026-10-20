@@ -43,13 +43,13 @@ public class RecipeController {
     }
 
     /**
-     * Lists recipes, optionally filtered by a loose (case-insensitive,
-     * partial) title match: {@code GET /api/recipes?q=onion}.
+     * Lists recipes, optionally filtered by a loose (case-insensitive, partial)
+     * match on the title or any tag: {@code GET /api/recipes?q=onion}.
      */
     @GetMapping
     public ResponseEntity<java.util.List<RecipeResponse>> list(
             @RequestParam(name = "q", required = false) String q) {
-        return ResponseEntity.ok(recipeService.searchByTitle(q).stream()
+        return ResponseEntity.ok(recipeService.search(q).stream()
                 .map(RecipeResponse::from)
                 .toList());
     }

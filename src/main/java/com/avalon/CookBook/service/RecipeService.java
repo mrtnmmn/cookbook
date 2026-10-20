@@ -92,30 +92,41 @@ public class RecipeService {
     }
 
     /**
-     * Loose title search: every whitespace-separated token must appear somewhere
-     * in the title (case-insensitive), so "onion ramen" also finds
-     * "Creamy onion ramen". A blank query returns every recipe.
+     * Loose search over title and tags: every whitespace-separated token must
+     * appear in either the title or one of the tags (case-insensitive), so
+     * "onion ramen" and "asian soup" can both find "Creamy onion ramen".
+     * A blank query returns every recipe.
      */
     @Transactional(readOnly = true)
-    public List<Recipe> searchByTitle(String query) {
+    public List<Recipe> search(String query) {
         if (query == null || query.isBlank()) {
             return findAll();
         }
 
         String[] tokens = query.trim().toLowerCase().split("\\s+");
 
-        // The widest token drives the (indexable) database filter; the rest are
-        // applied in memory on the already small result set.
+        // The widest token drives the database filter; the remaining tokens are
+        // applied in memory on the already narrowed result set.
         String broadest = java.util.Arrays.stream(tokens)
                 .max(java.util.Comparator.comparingInt(String::length))
                 .orElse("");
 
-        return recipeRepository.findByTitleContainingIgnoreCaseOrderByTitleAsc(broadest).stream()
+        List<Long> ids = recipeRepository.findIdsMatchingTitleOrTag(broadest);
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+
+        return recipeRepository.findByIdInOrderByTitleAsc(ids).stream()
                 .filter(recipe -> {
-                    String title = recipe.getTitle().toLowerCase();
-                    return java.util.Arrays.stream(tokens).allMatch(title::contains);
+                    String haystack = haystack(recipe);
+                    return java.util.Arrays.stream(tokens).allMatch(haystack::contains);
                 })
                 .toList();
+    }
+
+    /** Lower-cased title plus tags, used for the in-memory token match. */
+    private static String haystack(Recipe recipe) {
+        return (recipe.getTitle() + " " + String.join(" ", recipe.getTags())).toLowerCase();
     }
 
     /** Deletes a recipe and its ingredient join rows. */

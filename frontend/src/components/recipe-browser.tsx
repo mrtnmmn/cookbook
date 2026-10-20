@@ -12,10 +12,10 @@ function normalize(value: string): string {
     .toLowerCase();
 }
 
-/** Loose match: every token of the query must appear in the title. */
+/** Loose match: every token of the query must appear in the title or a tag. */
 function matches(recipe: Recipe, tokens: string[]): boolean {
-  const title = normalize(recipe.title);
-  return tokens.every((token) => title.includes(token));
+  const haystack = normalize(`${recipe.title} ${recipe.tags.join(" ")}`);
+  return tokens.every((token) => haystack.includes(token));
 }
 
 function RecipeCard({ recipe }: Readonly<{ recipe: Recipe }>) {
@@ -53,7 +53,7 @@ function RecipeCard({ recipe }: Readonly<{ recipe: Recipe }>) {
 }
 
 /**
- * Recipe grid with a title search bar.
+ * Recipe grid with a search bar matching recipe titles and tags.
  *
  * Typing filters the recipes that are already loaded instantly, and a debounced
  * request then asks the API for further matches, which are appended to the
@@ -143,8 +143,8 @@ export function RecipeBrowser({
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search recipes by title..."
-          aria-label="Search recipes by title"
+          placeholder="Search recipes by title or tag..."
+          aria-label="Search recipes by title or tag"
           className="w-full rounded-full border border-black/15 bg-transparent py-2.5 pl-10 pr-4 text-sm outline-none focus:border-black/40 dark:border-white/20 dark:focus:border-white/50"
         />
       </div>
