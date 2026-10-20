@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 /**
- * The page itself is a client component, so its metadata lives here.
+ * Metadata for the create view.
  * Resolves to "CookBook - Cooking a new recipe" via the root layout template.
  */
 export const metadata: Metadata = {

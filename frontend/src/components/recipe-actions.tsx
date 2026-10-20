@@ -86,6 +86,17 @@ export function RecipeActions({ recipeId }: Readonly<{ recipeId: number }>) {
             role="menuitem"
             onClick={() => {
               setMenuOpen(false);
+              router.push(`/recipes/${recipeId}/edit`);
+            }}
+            className="block w-full px-4 py-2 text-left text-sm transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+          >
+            Edit recipe
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setMenuOpen(false);
               setError(null);
               setConfirmOpen(true);
             }}

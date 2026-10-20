@@ -66,6 +66,19 @@ export async function getRecipe(id: string | number): Promise<Recipe | null> {
   return res.json();
 }
 
+/** Builds an Error from an RFC 9457 problem body, flattening field errors. */
+async function problemError(res: Response): Promise<Error> {
+  const problem: ProblemDetail = await res.json().catch(() => ({}));
+  const fieldErrors = problem.errors
+    ? Object.entries(problem.errors)
+        .map(([field, message]) => `${field}: ${message}`)
+        .join("\n")
+    : "";
+  return new Error(
+    fieldErrors || problem.detail || `Request failed (HTTP ${res.status})`,
+  );
+}
+
 export async function createRecipe(
   payload: CreateRecipeRequest,
 ): Promise<Recipe> {
@@ -75,17 +88,23 @@ export async function createRecipe(
     body: JSON.stringify(payload),
   });
 
-  if (!res.ok) {
-    const problem: ProblemDetail = await res.json().catch(() => ({}));
-    const fieldErrors = problem.errors
-      ? Object.entries(problem.errors)
-          .map(([field, message]) => `${field}: ${message}`)
-          .join("\n")
-      : "";
-    throw new Error(
-      fieldErrors || problem.detail || `Request failed (HTTP ${res.status})`,
-    );
-  }
+  if (!res.ok) throw await problemError(res);
+
+  return res.json();
+}
+
+/** Full replacement of an existing recipe (PUT /api/recipes/{id}). */
+export async function updateRecipe(
+  id: string | number,
+  payload: CreateRecipeRequest,
+): Promise<Recipe> {
+  const res = await fetch(`${API_BASE_URL}/api/recipes/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) throw await problemError(res);
 
   return res.json();
 }
@@ -96,12 +115,7 @@ export async function deleteRecipe(id: string | number): Promise<void> {
     method: "DELETE",
   });
 
-  if (!res.ok && res.status !== 404) {
-    const problem: ProblemDetail = await res.json().catch(() => ({}));
-    throw new Error(
-      problem.detail || `Failed to delete recipe (HTTP ${res.status})`,
-    );
-  }
+  if (!res.ok && res.status !== 404) throw await problemError(res);
 }
 
 export function totalMinutes(recipe: Recipe): number | null {

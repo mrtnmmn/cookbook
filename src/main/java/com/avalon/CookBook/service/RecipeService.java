@@ -55,6 +55,37 @@ public class RecipeService {
                 .orElseThrow(() -> new RecipeNotFoundException(id));
     }
 
+    /**
+     * Replaces every field of an existing recipe, including its ingredient lines.
+     * The old join rows are flushed before the new ones are added so a line that
+     * is kept does not clash with itself on the composite primary key.
+     */
+    @Transactional
+    public Recipe update(Long id, CreateRecipeRequest request) {
+        Recipe recipe = recipeRepository.findWithIngredientsById(id)
+                .orElseThrow(() -> new RecipeNotFoundException(id));
+
+        recipe.setTitle(request.title().trim());
+        recipe.setDescription(request.description());
+        recipe.setInstructions(request.instructions());
+        recipe.setServings(request.servings());
+        recipe.setPrepMinutes(request.prepMinutes());
+        recipe.setCookMinutes(request.cookMinutes());
+        recipe.setTags(request.tags() == null ? List.of() : request.tags().stream().map(String::trim).toList());
+        recipe.setNutrition(request.nutrition());
+
+        recipe.getIngredients().clear();
+        recipeRepository.saveAndFlush(recipe);
+
+        int position = 0;
+        for (CreateRecipeRequest.IngredientInput line : request.ingredients()) {
+            Ingredient ingredient = resolveIngredient(line.name().trim());
+            recipe.addIngredient(ingredient, line.quantity(), line.unit(), position++);
+        }
+
+        return recipeRepository.save(recipe);
+    }
+
     @Transactional(readOnly = true)
     public List<Recipe> findAll() {
         return recipeRepository.findAll();

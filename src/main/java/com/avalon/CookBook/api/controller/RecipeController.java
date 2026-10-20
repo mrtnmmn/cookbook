@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -57,6 +58,16 @@ public class RecipeController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         recipeService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Full replacement of an existing recipe. The create DTO is reused so both
+     * write endpoints share a single validation contract.
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<RecipeResponse> update(@PathVariable Long id,
+            @Valid @RequestBody CreateRecipeRequest request) {
+        return ResponseEntity.ok(RecipeResponse.from(recipeService.update(id, request)));
     }
 }
 
