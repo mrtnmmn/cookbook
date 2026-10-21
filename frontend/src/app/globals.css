@@ -24,3 +24,23 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/*
+ * Hides the scrollbar of a scrollable element while keeping it scrollable.
+ * Used on the main content frame so iOS/macOS overlay scrollbars and the
+ * desktop scrollbar track never show up over the content.
+ */
+.hide-scrollbar {
+  /* Firefox */
+  scrollbar-width: none;
+  /* Legacy Edge / IE */
+  -ms-overflow-style: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  /* Safari (incl. iOS) and Chrome */
+  width: 0;
+  height: 0;
+  display: none;
+}
+

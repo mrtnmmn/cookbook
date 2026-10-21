@@ -9,7 +9,7 @@
 export function PageShell({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <div className="flex flex-1 justify-center px-6 py-12">
-      <main className="h-[calc(100dvh-6rem)] w-full max-w-4xl overflow-y-auto overscroll-contain pr-1 [scrollbar-gutter:stable]">
+      <main className="hide-scrollbar h-[calc(100dvh-6rem)] w-full max-w-4xl overflow-y-auto overscroll-contain">
         {children}
       </main>
     </div>
